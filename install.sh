@@ -320,31 +320,35 @@ sudo chmod +x /var/stratum/config/run.sh
     output " "
     if [[ ("$sub_domain" == "y" || "$sub_domain" == "Y") ]]; then
     echo 'include /etc/nginx/blockuseragents.rules;
-	server {
+server {
 	if ($blockedagent) {
                 return 403;
         }
+	
         if ($request_method !~ ^(GET|HEAD|POST)$) {
-        return 444;
+        	return 444;
         }
+	
         listen 80;
         listen [::]:80;
+	
         server_name '"${server_name}"';
+	
         root "/var/www/'"${server_name}"'/html/web";
         index index.html index.htm index.php;
         charset utf-8;
     
         location / {
-        try_files $uri $uri/ /index.php?$args;
+        	try_files $uri $uri/ /index.php?$args;
         }
         location @rewrite {
-        rewrite ^/(.*)$ /index.php?r=$1;
+        	rewrite ^/(.*)$ /index.php?r=$1;
         }
     
         location = /favicon.ico { access_log off; log_not_found off; }
         location = /robots.txt  { access_log off; log_not_found off; }
     
-        access_log off;
+        access_log /var/log/nginx/'"${server_name}"'.app-access.log combined buffer=32k;
         error_log  /var/log/nginx/'"${server_name}"'.app-error.log error;
     
         # allow larger file uploads and longer script runtimes
@@ -355,45 +359,50 @@ sudo chmod +x /var/stratum/config/run.sh
         sendfile off;
     
         location ~ ^/index\.php$ {
-            fastcgi_split_path_info ^(.+\.php)(/.+)$;
-            fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
-            fastcgi_index index.php;
-            include fastcgi_params;
-            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-            fastcgi_intercept_errors off;
-            fastcgi_buffer_size 16k;
-            fastcgi_buffers 4 16k;
-            fastcgi_connect_timeout 300;
-            fastcgi_send_timeout 300;
-            fastcgi_read_timeout 300;
-	    try_files $uri $uri/ =404;
+        	fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        	fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+        	fastcgi_index index.php;
+        	include fastcgi_params;
+        	fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        	fastcgi_intercept_errors off;
+        	fastcgi_buffer_size 16k;
+        	fastcgi_buffers 4 16k;
+        	fastcgi_connect_timeout 300;
+        	fastcgi_send_timeout 300;
+        	fastcgi_read_timeout 300;
+		try_files $uri $uri/ =404;
         }
-		location ~ \.php$ {
+	
+	location ~ \.php$ {
         	return 404;
         }
-		location ~ \.sh {
+	
+	location ~ \.sh {
 		return 404;
         }
-		location ~ /\.ht {
+	
+	location ~ /\.ht {
 		deny all;
         }
-		location ~ /.well-known {
+	
+	location ~ /.well-known {
 		allow all;
         }
-		location /phpmyadmin {
+	
+	location /phpmyadmin {
   		root /usr/share/;
   		index index.php;
   		try_files $uri $uri/ =404;
   		location ~ ^/phpmyadmin/(doc|sql|setup)/ {
-    		deny all;
-  	}
+    			deny all;
+  		}
   		location ~ /phpmyadmin/(.+\.php)$ {
-    		fastcgi_pass unix:/run/php/php7.0-fpm.sock;
-    		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-    		include fastcgi_params;
-    		include snippets/fastcgi-php.conf;
-  	}
- }
+    			fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+    			fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    			include fastcgi_params;
+    			include snippets/fastcgi-php.conf;
+  		}
+ 	}
  }
 ' | sudo -E tee /etc/nginx/sites-available/$server_name.conf >/dev/null 2>&1
 
